@@ -80,20 +80,22 @@ several.
 
 **An App Store Connect API key** for notarisation. This is key `38ANZ53D9L`, the one key every
 app uses, and it lives in the signing kit. On a Mac the kit is the folder `~/.signing-kit/`,
-and the key is `~/.signing-kit/asc-api-key.p8`. If this Mac has no kit, recreate it from the
-kit vault:
+and the key is `~/.signing-kit/asc-api-key.p8`. The kit and the Azure Key Vault behind it are
+described in
+[signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md)
+in The-Idea-Place-Projects. Nothing in it is ever copied into this repository.
+
+If this Mac has no kit, first sign in to Azure as that README's "A new computer" section says
+(with `az login --tenant`, not a plain `az login`), then recreate the kit from the vault:
 
 ```bash
 python3 ~/Documents/GitHub/The-Idea-Place-Projects/signing/sync-secrets.py pull-kit
 ```
 
-The kit, the vault behind it, and that command are described in
-[signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md)
-in The-Idea-Place-Projects. Nothing in it is ever copied into this repository.
-
-With the kit in place there is nothing to set: `build/notarize.sh` uses the kit's key, with key
-ID `38ANZ53D9L` and issuer `d36bb41d-a198-401d-b36c-2e4fd15163e1`. To use a different key, set
-these three variables, which take precedence over the kit:
+With the kit in place there is nothing to set: `build/notarize.sh` uses the kit's key, always
+with its own key ID `38ANZ53D9L` and issuer `d36bb41d-a198-401d-b36c-2e4fd15163e1`. A key ID or
+issuer left in the shell from an older setup is ignored, with a warning. To use a different key,
+set all three of these variables, which take precedence over the kit:
 
 - `NOTARY_KEY_PATH`: the path to the key's `.p8` file.
 - `NOTARY_KEY_ID`: its 10-character key ID.

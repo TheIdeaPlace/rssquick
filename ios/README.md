@@ -130,7 +130,7 @@ Both workflows are built on GitHub rather than on this Mac on purpose. The Mac r
 macOS, and Apple rejects App Store builds made on one. Both are driven by
 `ios/scripts/asc.py`. It also runs by hand on a Mac: with the signing kit in place it needs no
 setup, because it uses the kit's key `~/.signing-kit/asc-api-key.p8` with key ID `38ANZ53D9L`.
-To use a different key, set `ASC_KEY_PATH`, `ASC_KEY_ID` and `ASC_ISSUER_ID`.
+To use a different key, set all three of `ASC_KEY_PATH`, `ASC_KEY_ID` and `ASC_ISSUER_ID`.
 
 **Secrets.** The workflows use these, all **organization secrets on TheIdeaPlace** shared with
 this repository:
@@ -144,8 +144,8 @@ this repository:
 
 Nobody sets these here by hand. The values live in the signing kit, an Azure Key Vault, and
 `sync-secrets.py --apply` sets them as organization secrets from it, so a renewed certificate is
-one command for every repository. On a Mac, `sync-secrets.py pull-kit` recreates the kit folder
-`~/.signing-kit/` from the vault. See
+one command for every repository. On a Mac signed in to Azure, `sync-secrets.py pull-kit`
+recreates the kit folder `~/.signing-kit/` from the vault. See
 [signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md)
 in The-Idea-Place-Projects. Do not add repository secrets with these names: a repository secret
 wins over the organization one, so a stale copy here would keep being used.

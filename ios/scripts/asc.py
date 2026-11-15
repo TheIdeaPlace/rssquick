@@ -11,9 +11,9 @@ three environment variables:
 
 It can be run by hand on a Mac too. On a Mac with the signing kit nothing needs setting: when
 ASC_KEY_PATH is unset, the kit's key ~/.signing-kit/asc-api-key.p8 is used (SIGNING_KIT points
-at another kit folder), with key ID 38ANZ53D9L and its issuer unless ASC_KEY_ID or ASC_ISSUER_ID
-say otherwise. signing/README.md in kellylford/The-Idea-Place-Projects describes the kit and how
-`sync-secrets.py pull-kit` recreates it on any Mac.
+at another kit folder), always with its own key ID 38ANZ53D9L and issuer; a stray ASC_KEY_ID or
+ASC_ISSUER_ID is ignored with a warning. signing/README.md in kellylford/The-Idea-Place-Projects
+describes the kit; `sync-secrets.py pull-kit` there recreates it on a Mac.
 
 Commands:
 
@@ -54,8 +54,8 @@ KIT_ISSUER_ID = "d36bb41d-a198-401d-b36c-2e4fd15163e1"
 def credentials(env=os.environ):
     """(key_path, key_id, issuer) from the environment, falling back to the signing kit.
 
-    The kit's key ID and issuer are only filled in when the kit's key file is the one used, so
-    a key named in ASC_KEY_PATH is never paired with the kit's ID by accident.
+    The kit's key file is always paired with the kit's own key ID and issuer, and a key named in
+    ASC_KEY_PATH with the IDs set alongside it, so a key file and an ID never mix by accident.
     """
     key_path = env.get("ASC_KEY_PATH")
     if key_path:
@@ -64,10 +64,15 @@ def credentials(env=os.environ):
     key_path = os.path.join(kit, "asc-api-key.p8")
     if not os.path.isfile(key_path):
         sys.exit(f"No App Store Connect API key: ASC_KEY_PATH is not set and the signing kit has "
-                 f"no {key_path}. Recreate the kit with sync-secrets.py pull-kit "
-                 f"(signing/README.md in kellylford/The-Idea-Place-Projects), or set ASC_KEY_PATH, "
-                 f"ASC_KEY_ID and ASC_ISSUER_ID.")
-    return key_path, env.get("ASC_KEY_ID") or KIT_KEY_ID, env.get("ASC_ISSUER_ID") or KIT_ISSUER_ID
+                 f"no {key_path}. Sign in to Azure as signing/README.md's \"A new computer\" says "
+                 f"(kellylford/The-Idea-Place-Projects) and recreate the kit with "
+                 f"sync-secrets.py pull-kit, or set ASC_KEY_PATH, ASC_KEY_ID and ASC_ISSUER_ID.")
+    if env.get("ASC_KEY_ID", KIT_KEY_ID) not in ("", KIT_KEY_ID) or \
+            env.get("ASC_ISSUER_ID", KIT_ISSUER_ID) not in ("", KIT_ISSUER_ID):
+        print("warning: ignoring ASC_KEY_ID / ASC_ISSUER_ID from the environment; they do not "
+              "belong to the kit's key. Set ASC_KEY_PATH as well to use a different key.",
+              file=sys.stderr)
+    return key_path, KIT_KEY_ID, KIT_ISSUER_ID
 
 
 class Client:

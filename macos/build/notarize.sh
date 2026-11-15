@@ -26,11 +26,11 @@
 #
 # On a Mac with the signing kit, none of these need setting. When neither NOTARY_KEY_PATH nor
 # NOTARY_PROFILE is set and ~/.signing-kit/asc-api-key.p8 exists (or SIGNING_KIT points at
-# another kit folder), the kit's key is used, with key ID 38ANZ53D9L and its issuer unless
-# NOTARY_KEY_ID or NOTARY_ISSUER_ID say otherwise. The kit, and how to recreate it on any Mac
-# with `sync-secrets.py pull-kit`, is described in signing/README.md in
-# kellylford/The-Idea-Place-Projects. CI sets NOTARY_KEY_PATH itself, so it never reaches the
-# kit default.
+# another kit folder), the kit's key is used, always with its own key ID 38ANZ53D9L and issuer:
+# a NOTARY_KEY_ID or NOTARY_ISSUER_ID left over in the shell is ignored, with a warning, rather
+# than paired with the wrong key file. The kit is described in signing/README.md in
+# kellylford/The-Idea-Place-Projects; `sync-secrets.py pull-kit` there recreates it on a Mac.
+# CI sets NOTARY_KEY_PATH itself, so it never reaches the kit default.
 #
 # These names match scripts/notarize_macos.sh in GHManage on purpose, so one set of exported
 # variables covers both repositories.
@@ -55,9 +55,14 @@ fi
 credargs=()
 if [[ -z "${NOTARY_KEY_PATH:-}" && -z "${NOTARY_PROFILE:-}" && -f "$kit_key" ]]; then
     echo "Using the signing kit's API key: $kit_key"
+    if [[ -n "${NOTARY_KEY_ID:-}" && "$NOTARY_KEY_ID" != "$KIT_KEY_ID" ]] \
+        || [[ -n "${NOTARY_ISSUER_ID:-}" && "$NOTARY_ISSUER_ID" != "$KIT_ISSUER_ID" ]]; then
+        echo "warning: ignoring NOTARY_KEY_ID / NOTARY_ISSUER_ID from the environment; they do not" >&2
+        echo "belong to the kit's key. Set NOTARY_KEY_PATH as well to use a different key." >&2
+    fi
     NOTARY_KEY_PATH="$kit_key"
-    NOTARY_KEY_ID="${NOTARY_KEY_ID:-$KIT_KEY_ID}"
-    NOTARY_ISSUER_ID="${NOTARY_ISSUER_ID:-$KIT_ISSUER_ID}"
+    NOTARY_KEY_ID="$KIT_KEY_ID"
+    NOTARY_ISSUER_ID="$KIT_ISSUER_ID"
 fi
 
 if [[ -n "${NOTARY_KEY_PATH:-}" && -n "${NOTARY_KEY_ID:-}" && -n "${NOTARY_ISSUER_ID:-}" ]]; then
@@ -80,8 +85,8 @@ else
 error: no notarization credentials.
 
 The usual source is the signing kit: ~/.signing-kit/asc-api-key.p8. If this Mac has no kit,
-recreate it from the kit vault with sync-secrets.py pull-kit (signing/README.md in
-kellylford/The-Idea-Place-Projects).
+sign in to Azure as signing/README.md's "A new computer" says (kellylford/The-Idea-Place-Projects),
+then recreate the kit from the vault with sync-secrets.py pull-kit.
 
 Or set either
 
