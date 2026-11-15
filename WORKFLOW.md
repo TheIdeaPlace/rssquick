@@ -51,16 +51,22 @@ unnotarised image is not a releasable artefact — it is a build you keep to you
 That needs two credentials, neither of which lives in the repository:
 
 - A **Developer ID Application** certificate in the keychain.
-- An **App Store Connect API key** — a `.p8`, a Key ID and an Issuer ID — exported as
-  `NOTARY_KEY_PATH`, `NOTARY_KEY_ID` and `NOTARY_ISSUER_ID`.
+- The **App Store Connect API key** `38ANZ53D9L`, which `build/notarize.sh` reads from the
+  signing kit, `~/.signing-kit/asc-api-key.p8`. `NOTARY_KEY_PATH`, `NOTARY_KEY_ID` and
+  `NOTARY_ISSUER_ID` override it.
+
+Both have their master copy in the signing kit, described in
+[signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md)
+in The-Idea-Place-Projects.
 
 With both in place, `./build.sh dist` in `macos/` runs the tests, builds the universal app, signs
 it, notarises and staples it, builds the image, signs and notarises that, and verifies the
 result. It fails closed. Most of the 5–30 minutes is Apple's: two submissions, each two to
 fifteen.
 
-The same scripts run in CI, which needs those credentials as five repository secrets.
-[macos/README.md](macos/README.md) has the full list and how to produce each one.
+The same scripts run in CI, which gets those credentials from five TheIdeaPlace organization
+secrets, set from the kit by `sync-secrets.py --apply`. [macos/README.md](macos/README.md) has
+the list.
 
 If you have no Mac to hand, tag and let `macos-release.yml` do it — that is the whole point of it
 existing. What you cannot do without a Mac is step 4, opening the finished image with VoiceOver,
