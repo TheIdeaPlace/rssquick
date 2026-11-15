@@ -17,16 +17,29 @@
 # without interaction in CI. A stored keychain profile is accepted too, since it is the same
 # credential by another route. Tried in this order:
 #
-#   NOTARY_KEY_PATH     Path to AuthKey_XXXXXXXXXX.p8
+#   NOTARY_KEY_PATH     Path to the API key's .p8 file
 #   NOTARY_KEY_ID       The 10-character Key ID
 #   NOTARY_ISSUER_ID    The issuer UUID from App Store Connect
 #
 #   NOTARY_PROFILE      Profile name stored by `notarytool store-credentials`
 #   NOTARY_KEYCHAIN     Optional keychain holding it
 #
+# On a Mac with the signing kit, none of these need setting. When neither NOTARY_KEY_PATH nor
+# NOTARY_PROFILE is set and ~/.signing-kit/asc-api-key.p8 exists (or SIGNING_KIT points at
+# another kit folder), the kit's key is used, with key ID 38ANZ53D9L and its issuer unless
+# NOTARY_KEY_ID or NOTARY_ISSUER_ID say otherwise. The kit, and how to recreate it on any Mac
+# with `sync-secrets.py pull-kit`, is described in signing/README.md in
+# kellylford/The-Idea-Place-Projects. CI sets NOTARY_KEY_PATH itself, so it never reaches the
+# kit default.
+#
 # These names match scripts/notarize_macos.sh in GHManage on purpose, so one set of exported
 # variables covers both repositories.
 set -euo pipefail
+
+# The signing kit's App Store Connect API key, the documented local default.
+KIT_KEY_ID="38ANZ53D9L"
+KIT_ISSUER_ID="d36bb41d-a198-401d-b36c-2e4fd15163e1"
+kit_key="${SIGNING_KIT:-$HOME/.signing-kit}/asc-api-key.p8"
 
 if [[ $# -ne 1 ]]; then
     echo "usage: notarize.sh <path-to-.app-or-.dmg-or-.zip>" >&2
@@ -40,6 +53,13 @@ if [[ ! -e "$target" ]]; then
 fi
 
 credargs=()
+if [[ -z "${NOTARY_KEY_PATH:-}" && -z "${NOTARY_PROFILE:-}" && -f "$kit_key" ]]; then
+    echo "Using the signing kit's API key: $kit_key"
+    NOTARY_KEY_PATH="$kit_key"
+    NOTARY_KEY_ID="${NOTARY_KEY_ID:-$KIT_KEY_ID}"
+    NOTARY_ISSUER_ID="${NOTARY_ISSUER_ID:-$KIT_ISSUER_ID}"
+fi
+
 if [[ -n "${NOTARY_KEY_PATH:-}" && -n "${NOTARY_KEY_ID:-}" && -n "${NOTARY_ISSUER_ID:-}" ]]; then
     if [[ ! -f "$NOTARY_KEY_PATH" ]]; then
         echo "error: NOTARY_KEY_PATH is set but there is no file there: $NOTARY_KEY_PATH" >&2
@@ -59,7 +79,11 @@ else
     cat >&2 <<'USAGE'
 error: no notarization credentials.
 
-Set either
+The usual source is the signing kit: ~/.signing-kit/asc-api-key.p8. If this Mac has no kit,
+recreate it from the kit vault with sync-secrets.py pull-kit (signing/README.md in
+kellylford/The-Idea-Place-Projects).
+
+Or set either
 
   NOTARY_KEY_PATH + NOTARY_KEY_ID + NOTARY_ISSUER_ID    an App Store Connect API key
 
@@ -67,7 +91,7 @@ or
 
   NOTARY_PROFILE                                        a stored notarytool profile
 
-See the signing section of macos/README.md for how to obtain the key.
+See the signing section of macos/README.md.
 USAGE
     exit 1
 fi

@@ -12,17 +12,17 @@ name: iOS TestFlight Release
 #
 # Built here rather than on the Mac on purpose: GitHub's runners are on released macOS and Xcode,
 # and Apple rejects App Store builds made on a beta macOS. Ported from Scores' ios-release.yml,
-# which has shipped that way; see README-ios-release.md there for how its secrets were made.
+# which has shipped that way.
 #
-# Repository secrets:
+# Secrets, all TheIdeaPlace organization secrets set from the signing kit by sync-secrets.py
+# (signing/README.md in kellylford/The-Idea-Place-Projects; ios/README.md has more):
 #   NOTARY_KEY_ID, NOTARY_ISSUER_ID, NOTARY_KEY_P8
 #       The App Store Connect API key the macOS release already uses (NOTARY_KEY_P8 is the .p8,
 #       base64-encoded). It needs the App Manager or Admin role to manage TestFlight groups and
 #       submit for review.
 #   IOS_DIST_CERT_P12, IOS_DIST_CERT_PASSWORD
-#       The "Apple Distribution" certificate and its private key, exported as a .p12 and
-#       base64-encoded, and the password it was exported with. Not the Developer ID certificate
-#       the Mac build signs with. ios/README.md has the commands.
+#       The "Apple Distribution" certificate and its private key, as a base64-encoded .p12, and
+#       its password. Not the Developer ID certificate the Mac build signs with.
 
 on:
   push:

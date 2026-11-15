@@ -2,12 +2,18 @@
 """App Store Connect for RSS Quick: TestFlight status, build numbers, and distribution.
 
 Run by .github/workflows/ios-release.yml and ios-testflight-status.yml on a GitHub runner, where
-the App Store Connect API key comes from repository secrets. It can be run by hand on a Mac too,
-with the same three environment variables:
+the App Store Connect API key comes from the NOTARY_* organization secrets and is passed in
+three environment variables:
 
     ASC_KEY_ID        the 10-character key ID
     ASC_ISSUER_ID     the issuer UUID
-    ASC_KEY_PATH      path to AuthKey_<id>.p8
+    ASC_KEY_PATH      path to the key's .p8 file
+
+It can be run by hand on a Mac too. On a Mac with the signing kit nothing needs setting: when
+ASC_KEY_PATH is unset, the kit's key ~/.signing-kit/asc-api-key.p8 is used (SIGNING_KIT points
+at another kit folder), with key ID 38ANZ53D9L and its issuer unless ASC_KEY_ID or ASC_ISSUER_ID
+say otherwise. signing/README.md in kellylford/The-Idea-Place-Projects describes the kit and how
+`sync-secrets.py pull-kit` recreates it on any Mac.
 
 Commands:
 
@@ -40,14 +46,35 @@ BUNDLE_ID = "com.kellylford.rssquick"
 API = "https://api.appstoreconnect.apple.com/v1"
 DEFAULT_GROUP = "External"
 
+# The signing kit's App Store Connect API key: the local default when ASC_KEY_PATH is unset.
+KIT_KEY_ID = "38ANZ53D9L"
+KIT_ISSUER_ID = "d36bb41d-a198-401d-b36c-2e4fd15163e1"
+
+
+def credentials(env=os.environ):
+    """(key_path, key_id, issuer) from the environment, falling back to the signing kit.
+
+    The kit's key ID and issuer are only filled in when the kit's key file is the one used, so
+    a key named in ASC_KEY_PATH is never paired with the kit's ID by accident.
+    """
+    key_path = env.get("ASC_KEY_PATH")
+    if key_path:
+        return key_path, env["ASC_KEY_ID"], env["ASC_ISSUER_ID"]
+    kit = env.get("SIGNING_KIT") or os.path.join(os.path.expanduser("~"), ".signing-kit")
+    key_path = os.path.join(kit, "asc-api-key.p8")
+    if not os.path.isfile(key_path):
+        sys.exit(f"No App Store Connect API key: ASC_KEY_PATH is not set and the signing kit has "
+                 f"no {key_path}. Recreate the kit with sync-secrets.py pull-kit "
+                 f"(signing/README.md in kellylford/The-Idea-Place-Projects), or set ASC_KEY_PATH, "
+                 f"ASC_KEY_ID and ASC_ISSUER_ID.")
+    return key_path, env.get("ASC_KEY_ID") or KIT_KEY_ID, env.get("ASC_ISSUER_ID") or KIT_ISSUER_ID
+
 
 class Client:
     def __init__(self):
-        key_path = os.environ["ASC_KEY_PATH"]
+        key_path, self._key_id, self._issuer = credentials()
         with open(key_path, encoding="utf-8") as f:
             self._key = f.read()
-        self._key_id = os.environ["ASC_KEY_ID"]
-        self._issuer = os.environ["ASC_ISSUER_ID"]
         self._session = requests.Session()
         self._token_expires = 0
 

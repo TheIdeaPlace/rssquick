@@ -66,7 +66,9 @@ whole purpose is being easy to use without sight.
 
 Both come from a paid Apple Developer membership.
 
-**A Developer ID Application certificate** in your keychain. Check with:
+**A Developer ID Application certificate** in your keychain. Its master copy is in the signing
+kit (described below); signing/README.md's "A new computer" section has how to put it in a
+Mac's keychain. Check with:
 
 ```bash
 security find-identity -v -p codesigning
@@ -76,20 +78,29 @@ It is the entry reading `Developer ID Application: <name> (<team id>)`. `sign.sh
 such identity on its own; set `RSSQUICK_SIGNING_IDENTITY` to the full string to choose between
 several.
 
-**An App Store Connect API key** for notarisation, created under Users and Access → Integrations
-→ App Store Connect API with the Developer role. It gives you three things: a downloadable
-`AuthKey_XXXXXXXXXX.p8` (once only — Apple will not offer it again), a 10-character Key ID, and
-an Issuer ID. Keep the `.p8` outside the repository.
+**An App Store Connect API key** for notarisation. This is key `38ANZ53D9L`, the one key every
+app uses, and it lives in the signing kit. On a Mac the kit is the folder `~/.signing-kit/`,
+and the key is `~/.signing-kit/asc-api-key.p8`. If this Mac has no kit, recreate it from the
+kit vault:
 
 ```bash
-export NOTARY_KEY_PATH=~/keys/AuthKey_XXXXXXXXXX.p8
-export NOTARY_KEY_ID=XXXXXXXXXX
-export NOTARY_ISSUER_ID=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+python3 ~/Documents/GitHub/The-Idea-Place-Projects/signing/sync-secrets.py pull-kit
 ```
 
-These variable names are the ones `GHManage/scripts/notarize_macos.sh` uses, so one set of
-exports covers both projects. A `notarytool` keychain profile works too — set `NOTARY_PROFILE`
-instead — but the key is the form that also works unattended in CI.
+The kit, the vault behind it, and that command are described in
+[signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md)
+in The-Idea-Place-Projects. Nothing in it is ever copied into this repository.
+
+With the kit in place there is nothing to set: `build/notarize.sh` uses the kit's key, with key
+ID `38ANZ53D9L` and issuer `d36bb41d-a198-401d-b36c-2e4fd15163e1`. To use a different key, set
+these three variables, which take precedence over the kit:
+
+- `NOTARY_KEY_PATH`: the path to the key's `.p8` file.
+- `NOTARY_KEY_ID`: its 10-character key ID.
+- `NOTARY_ISSUER_ID`: the issuer ID.
+
+These variable names are the ones `GHManage/scripts/notarize_macos.sh` uses. A `notarytool`
+keychain profile works too: set `NOTARY_PROFILE` instead.
 
 ### Running it
 
@@ -133,28 +144,23 @@ RSS Quick, with VoiceOver on, and confirming there is no security prompt anywher
 `.github/workflows/macos-release.yml` runs the same scripts on a `macos-15` runner, on a `v*` tag
 or on demand, and attaches the image to the draft release that `release.yml`'s notes job creates.
 A tag whose `RELEASE-PLATFORMS` leaves the Mac out (a fix for another platform) builds nothing
-here; WORKFLOW.md's Versioning section has the rule. It needs five repository secrets:
+here; WORKFLOW.md's Versioning section has the rule. It uses five secrets:
 
-| Secret | Is |
-|---|---|
-| `MACOS_CERTIFICATE_P12` | The Developer ID certificate and key, exported as a `.p12` and base64-encoded |
-| `MACOS_CERTIFICATE_PASSWORD` | The password set when exporting that `.p12` |
-| `NOTARY_KEY_P8` | The `AuthKey_XXXXXXXXXX.p8`, base64-encoded |
-| `NOTARY_KEY_ID` | The 10-character Key ID |
-| `NOTARY_ISSUER_ID` | The Issuer ID |
+- `MACOS_CERTIFICATE_P12`: the Developer ID Application certificate and its private key.
+- `MACOS_CERTIFICATE_PASSWORD`: the password of that certificate file.
+- `NOTARY_KEY_P8`: the App Store Connect API key `38ANZ53D9L`.
+- `NOTARY_KEY_ID`: its key ID.
+- `NOTARY_ISSUER_ID`: its issuer ID.
+
+All five are **organization secrets on TheIdeaPlace**, shared with this repository and the other
+apps that sign for the Mac. Nobody sets them here by hand. `sync-secrets.py --apply` sets them
+from the signing kit, once for every repository that shares them, and a renewed certificate is
+the same one command. See
+[signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md).
+Do not add repository secrets with these names: a repository secret wins over the organization
+one, so a stale copy here would keep being used.
 
 `MACOS_SIGNING_IDENTITY` is optional and only needed if the certificate has to be chosen by name.
-
-`build/setup-ci-secrets.sh` sets all five in one go, from the certificate in the login keychain
-and the notary key described in `~/.fastweather-keys/asc.json` - the same files, and the same
-secret names, that Image-Description-Toolkit and GHManage use. Run it yourself, once: it asks
-macOS to export the certificate, which puts up one dialog, and it checks the notary key with
-Apple before uploading anything. The manual route below is what it automates.
-
-Export the `.p12` from Keychain Access by selecting the *private key* under the certificate —
-exporting the certificate alone produces a file with no key in it, which imports without
-complaint and then fails at the first `codesign`. Base64-encode both files with
-`base64 -i <file> | pbcopy`.
 
 The workflow imports the certificate into a throwaway keychain whose password it generates
 itself, and deletes that keychain in an `always()` step, so a cancelled run does not leave the

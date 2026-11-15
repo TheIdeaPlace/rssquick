@@ -128,29 +128,27 @@ TestFlight group with its public link. Run it from the Actions tab, or with
 
 Both workflows are built on GitHub rather than on this Mac on purpose. The Mac runs a beta
 macOS, and Apple rejects App Store builds made on one. Both are driven by
-`ios/scripts/asc.py`, which also runs by hand on a Mac with `ASC_KEY_ID`, `ASC_ISSUER_ID` and
-`ASC_KEY_PATH` set.
+`ios/scripts/asc.py`. It also runs by hand on a Mac: with the signing kit in place it needs no
+setup, because it uses the kit's key `~/.signing-kit/asc-api-key.p8` with key ID `38ANZ53D9L`.
+To use a different key, set `ASC_KEY_PATH`, `ASC_KEY_ID` and `ASC_ISSUER_ID`.
 
-**Repository secrets.**
-- **App Store Connect API key:** the workflows use the one the macOS release already uses
-  (`NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_KEY_P8`). That key needs the **App Manager**
-  or **Admin** role. Automatic signing needs it to create the App Store provisioning profile,
-  and distributing needs it to manage groups and submit builds. Check the role under Users and
-  Access → Integrations before the first tag. A Developer-role key can still run the status
-  workflow.
-- **Apple Distribution certificate:** not the Developer ID certificate the Mac build uses. Set
-  it once, from this Mac:
+**Secrets.** The workflows use these, all **organization secrets on TheIdeaPlace** shared with
+this repository:
 
-```bash
-# Keychain Access -> login -> My Certificates -> "Apple Distribution: Kelly Ford (P887QF74N8)"
-# (it must have a private key under it) -> Export -> dist.p12, with a password.
-base64 -i dist.p12 | gh secret set IOS_DIST_CERT_P12 -R TheIdeaPlace/rssquick
-gh secret set IOS_DIST_CERT_PASSWORD -R TheIdeaPlace/rssquick   # paste the export password
-rm dist.p12
-```
+- `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` and `NOTARY_KEY_P8`: the App Store Connect API key
+  `38ANZ53D9L`, the same one the macOS release uses. It has the **Admin** role, which this
+  needs: automatic signing creates the App Store provisioning profile with it, and distributing
+  manages groups and submits builds.
+- `IOS_DIST_CERT_P12` and `IOS_DIST_CERT_PASSWORD`: the Apple Distribution certificate, not the
+  Developer ID certificate the Mac build uses.
 
-These are the same certificate and key Scores' `ios-release.yml` uses. GitHub secrets are
-per-repository, so they have to be set here too.
+Nobody sets these here by hand. The values live in the signing kit, an Azure Key Vault, and
+`sync-secrets.py --apply` sets them as organization secrets from it, so a renewed certificate is
+one command for every repository. On a Mac, `sync-secrets.py pull-kit` recreates the kit folder
+`~/.signing-kit/` from the vault. See
+[signing/README.md](https://github.com/kellylford/The-Idea-Place-Projects/blob/main/signing/README.md)
+in The-Idea-Place-Projects. Do not add repository secrets with these names: a repository secret
+wins over the organization one, so a stale copy here would keep being used.
 
 ### Each release: from this Mac
 
