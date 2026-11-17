@@ -211,6 +211,25 @@ and `ios-testflight-status.yml` reports it read-only - use that rather than gues
 `ios/scripts/release-testflight.sh <build>` still uploads from the Mac by hand. Read `ios/README.md` first: it lists where iOS deliberately differs from
 the desktop versions, and it has the one-time App Store Connect setup.
 
+## When running in GitHub Actions (`@claude`)
+
+When someone writes `@claude` in an issue or a pull request, Claude Code runs in `claude.yml` on a
+Linux runner. Kelly's own setup isn't there: no user-level instructions, skills or agents, no
+Windows, no Swift toolchain and no screen reader. So:
+
+- **You can't build or test here.** WPF needs Windows and the Apple code needs a Mac. Write the
+  change and its tests, push the branch, and let the pull request's CI (`ci.yml`,
+  `apple-ci.yml`) be the first build. Say so in your reply instead of claiming it works.
+- **Keep to the parity rule above.** A feature request means Windows, macOS and iOS in the same
+  branch. If you can only do part of it, say which platforms are left.
+- **Never touch releases.** Don't push tags, edit `VERSION`, or run or change the release, signing
+  or Store workflows. Publishing waits for Kelly.
+- **Don't push to a branch another session is working on.** If the pull request was opened by a
+  desktop session, answer the question and leave the code to that session unless asked.
+- **End your reply with what a person has to check:** focus and tab order, what NVDA, JAWS or
+  VoiceOver says, and anything only visible in the running app. The accessibility constraints
+  above are the checklist.
+
 ## Historical context
 
 `DEVELOPMENT-NOTES.md` is a record of the original 3-panel → 2-panel rework. It is history, not current documentation: it describes build scripts that no longer exist. The parts still worth reading are the braille whitespace investigation and the screen reader design principles.
